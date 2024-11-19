@@ -3,26 +3,42 @@ from flask_cors import CORS
 import json
 import os
 import uuid
+import logging
 from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='build', static_url_path='/')
 CORS(app)
 
 STORAGE_DIR = os.path.join(os.path.expanduser('~'), '.prompt_storage')
 os.makedirs(STORAGE_DIR, exist_ok=True)
+logger.info(f"Using storage directory: {STORAGE_DIR}")
 
 def get_prompts_file():
-    return os.path.join(STORAGE_DIR, 'prompts.json')
+    prompts_file = os.path.join(STORAGE_DIR, 'prompts.json')
+    logger.debug(f"Prompts file path: {prompts_file}")
+    return prompts_file
 
 def load_prompts():
     try:
-        with open(get_prompts_file(), 'r') as f:
+        prompts_file = get_prompts_file()
+        logger.info(f"Loading prompts from: {prompts_file}")
+        with open(prompts_file, 'r') as f:
             return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.warning(f"No existing prompts found or error reading file: {str(e)}")
         return []
 
 def save_prompts(prompts):
-    with open(get_prompts_file(), 'w') as f:
+    prompts_file = get_prompts_file()
+    logger.info(f"Saving {len(prompts)} prompts to: {prompts_file}")
+    with open(prompts_file, 'w') as f:
         json.dump(prompts, f, indent=4)
 
 @app.route('/')
@@ -54,7 +70,7 @@ def create_prompt():
         save_prompts(prompts)
         return jsonify(prompt_data), 201
     except Exception as e:
-        print(f"Error creating prompt: {str(e)}")
+        logger.error(f"Error creating prompt: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
 @app.route('/prompts/<prompt_id>', methods=['DELETE'])
