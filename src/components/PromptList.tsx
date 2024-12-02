@@ -13,11 +13,9 @@ export function PromptList() {
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<Prompt | undefined>()
-  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || '')
-  const [selectedTags, setSelectedTags] = useState<string[]>(
-    searchParams.has('tag') ? [searchParams.get('tag')!] : []
-  )
-  const [isFilterOpen, setIsFilterOpen] = useState(searchParams.get('showFilters') === 'true')
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showMigration, setShowMigration] = useState(false)
@@ -36,46 +34,19 @@ export function PromptList() {
     checkForMigration()
   }, [])
 
+  // Update selected filters from URL parameters whenever they change
   useEffect(() => {
-    // Update URL parameters when filters change
-    const params = new URLSearchParams(searchParams)
-    
-    if (selectedCategory) {
-      params.set('category', selectedCategory)
-    } else {
-      params.delete('category')
-    }
+    const category = searchParams.get('category')
+    const tag = searchParams.get('tag')
+    const showFilters = searchParams.get('showFilters')
 
-    if (selectedTags.length > 0) {
-      params.set('tags', selectedTags.join(','))
-    } else {
-      params.delete('tags')
+    setSelectedCategory(category || '')
+    // Only update selectedTags if it's different from current state
+    const newTags = tag ? [tag] : []
+    if (JSON.stringify(newTags) !== JSON.stringify(selectedTags)) {
+      setSelectedTags(newTags)
     }
-
-    if (isFilterOpen) {
-      params.set('showFilters', 'true')
-    } else {
-      params.delete('showFilters')
-    }
-
-    setSearchParams(params)
-  }, [selectedCategory, selectedTags, isFilterOpen])
-
-  useEffect(() => {
-    // Update filters from URL parameters
-    const categoryParam = searchParams.get('category')
-    const tagParam = searchParams.get('tag')
-    const showFiltersParam = searchParams.get('showFilters')
-
-    if (categoryParam) {
-      setSelectedCategory(categoryParam)
-    }
-    if (tagParam && !selectedTags.includes(tagParam)) {
-      setSelectedTags([tagParam])
-    }
-    if (showFiltersParam === 'true') {
-      setIsFilterOpen(true)
-    }
+    setIsFilterOpen(showFilters === 'true')
   }, [searchParams])
 
   const checkForMigration = () => {
@@ -159,18 +130,35 @@ export function PromptList() {
   }
 
   const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category)
-    // Clear tags when changing category
-    setSelectedTags([])
+    const params = new URLSearchParams(searchParams)
+    if (category) {
+      params.set('category', category)
+    } else {
+      params.delete('category')
+    }
+    params.delete('tag') // Clear tag when changing category
+    setSearchParams(params)
+    setSelectedTags([]) // Clear selected tags in local state
   }
 
   const handleTagsChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedOptions = Array.from(event.target.selectedOptions, option => option.value)
-    setSelectedTags(selectedOptions)
+    setSelectedTags(selectedOptions) // Update local state immediately
+    
+    const params = new URLSearchParams(searchParams)
+    if (selectedOptions.length > 0) {
+      params.set('tag', selectedOptions[0])
+    } else {
+      params.delete('tag')
+    }
+    setSearchParams(params)
   }
 
   const clearTags = () => {
-    setSelectedTags([])
+    const params = new URLSearchParams(searchParams)
+    params.delete('tag')
+    setSearchParams(params)
+    setSelectedTags([]) // Clear local state immediately
   }
 
   const filteredPrompts = prompts.filter(prompt => {
@@ -208,7 +196,11 @@ export function PromptList() {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Prompts</h2>
         <div className="flex gap-2">
           <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams)
+              params.set('showFilters', (!isFilterOpen).toString())
+              setSearchParams(params)
+            }}
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <Filter className="w-4 h-4" />

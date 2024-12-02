@@ -52,17 +52,11 @@ export function Dashboard() {
   }
 
   const navigateToCategory = (category: string) => {
-    const searchParams = new URLSearchParams()
-    searchParams.set('category', category)
-    searchParams.set('showFilters', 'true')
-    navigate(`/prompts?${searchParams.toString()}`)
+    navigate(`/prompts?category=${encodeURIComponent(category)}&showFilters=true`)
   }
 
   const navigateToTag = (tag: string) => {
-    const searchParams = new URLSearchParams()
-    searchParams.set('tag', tag)
-    searchParams.set('showFilters', 'true')
-    navigate(`/prompts?${searchParams.toString()}`)
+    navigate(`/prompts?tag=${encodeURIComponent(tag)}&showFilters=true`)
   }
 
   if (isLoading) {
